@@ -3,6 +3,8 @@
 #'
 #' @param postcodes A character vector of postcodes for which geocoding information is saught.
 #' @return A data frame containing geocoding information. For more details see http://postcodes.io/
+#' Only valid postcodes will have rows returned so there may be a different number of rows in the output than input.
+#' If no valid postcodes are found then the function returns NULL.
 #' @details The returned data frame will contain the following fields
 #' postcode, quality, eastings, northings, country, nhs_ha, longitude, latitude,
 #' parliamentary_constituency, european_electoral_region, primary_care_trust, region,
@@ -40,7 +42,7 @@ postcodes <- function(post_codes){
 
     names(r$codes) = names(result_list$codes)
 
-    retVal = as.data.frame(r)
+    retVal = as.data.frame(r, stringsAsFactors = F)
 
     return(retVal)
   }
@@ -66,8 +68,11 @@ postcodes <- function(post_codes){
   if(length(post_codes) == 1){
     r <- geo_content$result
 
-    retVal = clean_result_list(r)
-
+    if(is.null(r$postcode)){
+      retVal = NULL
+    } else {
+      retVal = clean_result_list(r)
+    }
   } else {
     l <- lapply(1:length(geo_content), function(i){
       r <- geo_content$result[[i]]$result
@@ -77,8 +82,8 @@ postcodes <- function(post_codes){
       return(retVal)
     })
 
-    retVal <- base::Map(as.data.frame, l)
-    retVal <- data.table::rbindlist(retVal)
+    retVal <- base::Map(as.data.frame, l[!sapply(l,function(a){is.null(a$postcode)})])
+    retVal <- data.table::rbindlist(retVal, fill = T)
   }
 
 
