@@ -1,0 +1,11 @@
+Package: flare.geocoding
+Type: Package
+Title: Various Geocoding Functions
+Version: 0.1.0
+Author: Johnathan McCabe
+Maintainer: Johnathan McCabe <johnathan.mccabe@gmail.com>
+Description: Various geocoding utility function. These will match the underlying APIs used where possible.
+License: What license is it under?
+Depends: R (>= 3.3.1), data.table, httr, jsonlite
+Encoding: UTF-8
+LazyData: true
