@@ -8,11 +8,43 @@
 #' parliamentary_constituency, european_electoral_region, primary_care_trust, region,
 #' lsoa, msoa, incode, outcode, admin_district, parish, admin_county, admin_ward, ccg,
 #' nuts, codes.admin_district, codes.admin_county, codes.admin_ward, codes.parish, codes.ccg, codes.nuts
-
-
 #' @examples postcodes(c("BR1 4AT"))
-
 postcodes <- function(post_codes){
+
+  #' Description Cleans the results list from poscodes.io
+  #'
+  #' @param result_list The result list returned from the API
+  #' @return A cleaned list with nulls replaced with NA
+  #' @details Replaces null with NA
+  #' @examples
+  clean_result_list <- function(result_list){
+
+    r <- lapply(1:length(result_list), function(i){
+      if(is.null(result_list[[i]])){
+        NA
+      } else {
+        result_list[[i]]
+      }
+    })
+
+
+    names(r) <- names(result_list)
+
+    r$codes <- lapply(1:length(r$codes), function(i){
+      if(is.null(r$codes[[i]])){
+        NA
+      } else {
+        r$codes[[i]]
+      }
+    })
+
+    names(r$codes) = names(result_list$codes)
+
+    retVal = as.data.frame(r)
+
+    return(retVal)
+  }
+
 
   httr::set_config(httr::config(ssl_verifypeer = 0L))
 
@@ -34,31 +66,13 @@ postcodes <- function(post_codes){
   if(length(post_codes) == 1){
     r <- geo_content$result
 
-    result_list <- lapply(1:length(r), function(i){
-      if(is.null(r[[i]])){
-        NA
-      } else {
-        r[[i]]
-      }
-    })
-
-    names(result_list) <- names(r)
-
-    retVal = as.data.frame(result_list)
+    retVal = clean_result_list(r)
 
   } else {
     l <- lapply(1:length(geo_content), function(i){
       r <- geo_content$result[[i]]$result
 
-      retVal <- lapply(1:length(r), function(i){
-        if(is.null(r[[i]])){
-          NA
-        } else {
-          r[[i]]
-        }
-      })
-
-      names(retVal) <- names(r)
+      retVal = clean_result_list(r)
 
       return(retVal)
     })
@@ -74,15 +88,4 @@ postcodes <- function(post_codes){
   return(retVal)
 }
 
-post_codes = "TW135dq"
-post_codes = c("TW135dq", "BT323sz")
 
-
-postcodes(post_codes)
-
-
-xx <- colnames(postcodes(post_codes))
-
-
-# see http://stackoverflow.com/questions/32035119/how-to-solve-clipboard-buffer-is-full-and-output-lost-error-in-r-running-in-wi
-write.table(xx, "clipboard-16384", sep="\t", row.names=FALSE)
