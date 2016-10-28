@@ -10,8 +10,11 @@
 #' parliamentary_constituency, european_electoral_region, primary_care_trust, region,
 #' lsoa, msoa, incode, outcode, admin_district, parish, admin_county, admin_ward, ccg,
 #' nuts, codes.admin_district, codes.admin_county, codes.admin_ward, codes.parish, codes.ccg, codes.nuts
+#'
+#' The httr package is used as the underlying transport for retrieving the data so please ensure that this has been configured correctly.
+#' e.g. httr::set_config(ssl_verifypeer = 0L) may need to be called
 #' @examples postcodes(c("BR1 4AT"))
-postcodes <- function(post_codes){
+geocode_from_postcode <- function(post_codes){
 
   #' Description Cleans the results list from poscodes.io
   #'
@@ -48,8 +51,6 @@ postcodes <- function(post_codes){
   }
 
 
-  httr::set_config(httr::config(ssl_verifypeer = 0L))
-
   request_url = "https://api.postcodes.io/postcodes/"
 
   if(length(post_codes) == 1){
@@ -59,7 +60,8 @@ postcodes <- function(post_codes){
 
     geo_response <- httr::POST(url = request_url,
                                body = postcode_list,
-                               encode = "json")
+                               encode = "json",
+                               authenticate("","","basic"))
   }
 
   geo_content <- httr::content(geo_response)
@@ -74,7 +76,7 @@ postcodes <- function(post_codes){
       retVal = clean_result_list(r)
     }
   } else {
-    l <- lapply(1:length(geo_content), function(i){
+    l <- lapply(1:length(geo_content$result), function(i){
       r <- geo_content$result[[i]]$result
 
       retVal = clean_result_list(r)
@@ -86,11 +88,5 @@ postcodes <- function(post_codes){
     retVal <- data.table::rbindlist(retVal, fill = T)
   }
 
-
-
-  httr::reset_config()
-
   return(retVal)
 }
-
-
