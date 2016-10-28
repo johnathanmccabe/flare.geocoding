@@ -13,6 +13,8 @@
 #'
 #' The httr package is used as the underlying transport for retrieving the data so please ensure that this has been configured correctly.
 #' e.g. httr::set_config(ssl_verifypeer = 0L) may need to be called
+#'
+#' Only one row is returned for each valid postcode (i.e. no duplicates)
 #' @examples postcodes(c("BR1 4AT"))
 geocode_from_postcode <- function(post_codes){
 
@@ -53,40 +55,57 @@ geocode_from_postcode <- function(post_codes){
 
   request_url = "https://api.postcodes.io/postcodes/"
 
-  if(length(post_codes) == 1){
-    geo_response = httr::GET(url = paste0(request_url, as.character(post_codes[1])))
-  } else {
-    postcode_list <- list(postcodes = post_codes)
+  #query for unique postcodes only then rejoin at the end
+  p <- unique(post_codes)
 
-    geo_response <- httr::POST(url = request_url,
-                               body = postcode_list,
-                               encode = "json",
-                               authenticate("","","basic"))
-  }
 
-  geo_content <- httr::content(geo_response)
+  ## need to batch requests as the maximum that can be requested at once is 100
+  n_batch <- ceiling(length(p)/100)
 
-  ## transform into data.table
-  if(length(post_codes) == 1){
-    r <- geo_content$result
 
-    if(is.null(r$postcode)){
-      retVal = NULL
+  retVal <- do.call("rbind", lapply(1:n_batch, function(n){
+
+    batch_postcodes <- post_codes[(100*(n-1)+1):(min(length(p), 100*n))]
+
+    if(length(batch_postcodes) == 1){
+      geo_response = httr::GET(url = paste0(request_url, as.character(batch_postcodes[1])))
     } else {
-      retVal = clean_result_list(r)
+      postcode_list <- list(postcodes = batch_postcodes)
+
+      geo_response <- httr::POST(url = request_url,
+                                 body = postcode_list,
+                                 encode = "json",
+                                 httr::authenticate("","","basic"))
     }
-  } else {
-    l <- lapply(1:length(geo_content$result), function(i){
-      r <- geo_content$result[[i]]$result
 
-      retVal = clean_result_list(r)
+    geo_content <- httr::content(geo_response)
 
-      return(retVal)
-    })
+    ## transform into data.table
+    if(length(batch_postcodes) == 1){
+      r <- geo_content$result
 
-    retVal <- base::Map(as.data.frame, l[!sapply(l,function(a){is.null(a$postcode)})])
-    retVal <- data.table::rbindlist(retVal, fill = T)
-  }
+      if(is.null(r$postcode)){
+        retVal = NULL
+      } else {
+        retVal = clean_result_list(r)
+      }
+    } else {
+      l <- lapply(1:length(geo_content$result), function(i){
+        r <- geo_content$result[[i]]$result
+
+        retVal = clean_result_list(r)
+
+        return(retVal)
+      })
+
+      retVal <- base::Map(as.data.frame, l[!sapply(l,function(a){is.null(a$postcode)})])
+      retVal <- data.table::rbindlist(retVal, fill = T)
+    }
+
+    return(retVal)
+  }))
 
   return(retVal)
 }
+
+

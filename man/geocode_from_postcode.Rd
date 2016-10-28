@@ -31,6 +31,8 @@ nuts, codes.admin_district, codes.admin_county, codes.admin_ward, codes.parish, 
 The httr package is used as the underlying transport for retrieving the data so please ensure that this has been configured correctly.
 e.g. httr::set_config(ssl_verifypeer = 0L) may need to be called
 
+Only one row is returned for each valid postcode (i.e. no duplicates)
+
 Replaces null with NA
 }
 \examples{
